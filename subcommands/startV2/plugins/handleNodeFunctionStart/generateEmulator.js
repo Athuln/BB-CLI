@@ -21,8 +21,33 @@ const packageJson = () => `
   }
 }`
 
-const emulatorCode = (port) =>
-  `
+const emulatorCode = (port, swaggerEnable) => {
+  let swaggerPlugin = ``
+  if (swaggerEnable) {
+    swaggerPlugin = `      
+    const OpenApiDocfilePath = "../";
+    const apis=[]
+  
+    fs.readdirSync(OpenApiDocfilePath).forEach(file=>{
+      let filePath ="../" + file + "/*.js";
+      apis.push(filePath)
+    })
+        
+    const options = {
+      definition: {
+        openapi: '3.0.0',
+        info: {
+          title: 'Api Doc',
+          version: '1.0.0',
+        },
+      },
+      apis: apis, // files containing annotations as above
+    };
+    const openapiSpecification = swaggerJSDoc(options)
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpecification))`
+  }
+
+  return `
   import express from "express";
   import http from "http";
   import cors from "cors";
@@ -65,6 +90,7 @@ const emulatorCode = (port) =>
   
   const app = express();
   app.use(cors());
+  ${swaggerPlugin}
   app.all("/*", appHandler);
   
   const server = http.createServer(app);
@@ -72,6 +98,7 @@ const emulatorCode = (port) =>
   console.log("Functions emulated on port ${port}");
   
 `.trim()
+}
 
 const generateMiddlewareHandler = () =>
   `
@@ -128,12 +155,12 @@ export { getBlock, getMiddlewareBlock };
  * @param {import('fs').PathLike} emPath Emulator directory path
  * @returns
  */
-async function generateEmFolder(emPath, blockList, port, middlewareBlockList) {
+async function generateEmFolder(emPath, blockList, port, middlewareBlockList, swaggerEnable) {
   const res = { err: false, data: '' }
   try {
     await mkdir(emPath, { recursive: true })
     await writeFile(path.join(emPath, '.gitignore'), BB_FOLDERS.BB)
-    await writeFile(path.join(emPath, 'index.js'), emulatorCode(port))
+    await writeFile(path.join(emPath, 'index.js'), emulatorCode(port, swaggerEnable))
     await writeFile(path.join(emPath, 'package.json'), packageJson())
     await writeFile(path.join(emPath, 'middlewareHandler.js'), generateMiddlewareHandler())
     await writeFile(path.join(emPath, 'utils.js'), generateUtils(blockList, middlewareBlockList))

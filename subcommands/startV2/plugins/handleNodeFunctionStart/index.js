@@ -86,16 +86,7 @@ class HandleNodeFunctionStart {
        */
       this.port = this.fnBlocks[0].availablePort
 
-      const _emFolderGen = await generateEmFolder(
-        emPath,
-        this.blockEmulateData,
-        this.port,
-        this.middlewareBlockListData
-      )
-      if (_emFolderGen.err) {
-        spinnies.fail('emBuild', { text: 'Function emulator build failed' })
-        return
-      }
+   
 
       if (core.cmdOpts.singleInstance) {
         const sharedBlocks = {}
@@ -183,6 +174,20 @@ class HandleNodeFunctionStart {
         core.envWarning.prefixes = core.envWarning.prefixes
           .concat(updatedFnEnv.envWarning.prefixes)
           .concat(updatedViewEnv.envWarning.prefixes)
+
+          const swaggerEnable=updatedFnEnv.envObject[`BB_${currentPackEnvPrefix}_SWAGGER_ENABLE`]??false
+
+          const _emFolderGen = await generateEmFolder(
+            emPath,
+            this.blockEmulateData,
+            this.port,
+            this.middlewareBlockListData,
+            swaggerEnable
+          )
+          if (_emFolderGen.err) {
+            spinnies.fail('emBuild', { text: 'Function emulator build failed' })
+            return
+          }
 
         let child = { pid: 0 }
         let pm2InstanceName
